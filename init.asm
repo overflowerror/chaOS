@@ -1,0 +1,4 @@
+SystemInit: 
+	rcall SchedulerInit
+	
+	reti
