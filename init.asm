@@ -1,4 +1,6 @@
 SystemInit: 
 	rcall SchedulerInit
 	
-	reti
+	sei
+	
+	jmp MainLoop

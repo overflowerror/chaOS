@@ -4,3 +4,6 @@
 .include	"init.asm"
 .include	"scheduler.asm"
 .include	"general.asm"
+
+MainLoop:
+	jmp MainLoop
