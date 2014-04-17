@@ -1,57 +1,57 @@
 ;; scheduler
 ;
 ; Because we want want to be able use multible thread, we need a scheduler.
-; This scheduler is supposed to support up to 5 threads.
+; This scheduler is supposed to support up to 4 threads.
 ;
 ;;
 
 ;; global memory map
 ;
-; $000
+; $0000
 ;	G P R
-; $01F
-; $020
+; $001F
+; $0020
 ;	I O R
-; $05F
-; $060
+; $005F
+; $0060
 ;	SRAM
-;	$060
+;	$0060
 ;		192 bytes of scheduler memory
-;	$102
-;	$103
-;		1069 bytes of heap
-;	$52F
-;	$530
-;		639 bytes of stack
-;	$62F
-; $62F
+;	$0102
+;	$0103
+;		15,680 bytes of heap
+;	$3EFF
+;	$3F00
+;		512 bytes of stack
+;	$40FF
+; $40FF
 ;
 ;;
-; this a ATmega16 specific
+; this a ATmega1284P specific
 
-.equ heap_start = 0x103			; starting address of heap
-.equ heap_end   = 0x52F			; ending address of heap
+.equ heap_start = 0x0103		; starting address of heap
+.equ heap_end   = 0x3EFF		; ending address of heap
 
-.equ scheduler_global_active = 0x060	; address of active-thread-cell
-.equ scheduler_global_number = 0x061	; address of thread-number-cell
-.equ scheduler_global_maxnum = 0x004	; maximal number of thread
-.equ scheduler_global_statu1 = 0x062	; address of global-status-cell 1
-.equ scheduler_global_statu2 = 0x063	; address of global-status-cell 2
-.equ scheduler_global_unused = 0x064	; start address of unused block
-.equ scheduler_global_thread = 0x06B	; starting address of scheduler memory
-.equ scheduler_global_length = 0x026	; length of thread in scheduler memory
-.equ scheduler_global_lastad = 0x102	; last address of scheduler memory
-.equ scheduler_global_stacks = 0x530	; start address of stacks
+.equ scheduler_global_active = 0x0060	; address of active-thread-cell
+.equ scheduler_global_number = 0x0061	; address of thread-number-cell
+.equ scheduler_global_maxnum = 0x0004	; maximal number of thread
+.equ scheduler_global_statu1 = 0x0062	; address of global-status-cell 1
+.equ scheduler_global_statu2 = 0x0063	; address of global-status-cell 2
+.equ scheduler_global_unused = 0x0064	; start address of unused block
+.equ scheduler_global_thread = 0x006B	; starting address of scheduler memory
+.equ scheduler_global_length = 0x0026	; length of thread in scheduler memory
+.equ scheduler_global_lastad = 0x0102	; last address of scheduler memory
+.equ scheduler_global_stacks = 0x3FFF	; start address of stacks
 
-.equ scheduler_offset_stacks = 0x040	; length of 1 stack
-.equ scheduler_offset_instat = 0x000	; offset of internal sr in scheduler memory
-.equ scheduler_offset_instrh = 0x001	; offset of iph in scheduler memory
-.equ scheduler_offset_instrl = 0x002	; offset of ipl in scheduler memory
-.equ scheduler_offset_status = 0x003	; offset of sr in scheduler memory
-.equ scheduler_offset_stackh = 0x004	; offset of sph in scheduler memory
-.equ scheduler_offset_stackl = 0x005	; offset of spl in scheduler memory
-.equ scheduler_offset_gprsta = 0x006	; start offset of gpr in scheduler momory
-.equ scheduler_offset_gprend = 0x025	; end offset of gpr in scheduler memory
+.equ scheduler_offset_stacks = 0x0080	; length of 1 stack
+.equ scheduler_offset_instat = 0x0000	; offset of internal sr in scheduler memory
+.equ scheduler_offset_instrh = 0x0001	; offset of iph in scheduler memory
+.equ scheduler_offset_instrl = 0x0002	; offset of ipl in scheduler memory
+.equ scheduler_offset_status = 0x0003	; offset of sr in scheduler memory
+.equ scheduler_offset_stackh = 0x0004	; offset of sph in scheduler memory
+.equ scheduler_offset_stackl = 0x0005	; offset of spl in scheduler memory
+.equ scheduler_offset_gprsta = 0x0006	; start offset of gpr in scheduler momory
+.equ scheduler_offset_gprend = 0x0025	; end offset of gpr in scheduler memory
 
 ;; scheduler memory
 ;
@@ -126,7 +126,7 @@
 ;
 ;; stacks
 ; 
-; As we should support 5 threads, we need 5 stacks. 
+; As we should support 4 threads, we need 4 stacks. 
 ; For the calculation of the stack space (see global memory map) I assumed that
 ; no stack will grow over 127 entries.
 ; Our initial stackpointer for thread x will be calculated this way:
