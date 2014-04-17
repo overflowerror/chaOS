@@ -138,21 +138,21 @@
 ;;
 
 SchedulerInit:
-	push	r10
-	in	r10,	sreg
-	push	r10
-	push	r11
+	push	r16
+	in	r16,	sreg
+	push	r16
+	push	r17
 	push	xl
 	push	xh
 	
 	; first we'll clear all scheduler memory cells
-	ldi	r10, 	0
-	ldi	r11, 	low (scheduler_global_lastad)
+	ldi	r16, 	0
+	ldi	r17, 	low (scheduler_global_lastad)
 	ldi	xl, 	low (scheduler_global_active)
 	ldi	xh, 	high(scheduler_global_active)
 	SchedulerInitLoop0: ; while(xl++ != r11)
-		st	x+, 	r10
-		cp	xl, 	r11
+		st	x+, 	r16
+		cp	xl, 	r17	; we can do this, because we'll never go over the low-byte
 		brne	SchedulerInitLoop0
 		
 	; add main-thread
@@ -160,7 +160,15 @@ SchedulerInit:
 		
 	; start scheduler timer
 	; we will use timer0 because we don't use all posibilities of timer2
-	; TODO
+	
+	; some config
+	ldi	r16,	0b000000010	; CTC
+	out	tccr0a,	r16
+	ldi	r16,	0b000000100	; Prescaler 256
+	out	tccr0b,	r16
+	ldi	r16,	0b000000011	; compare a: 3 x 256 ticks between interrupts
+	out	ocr0a	r16
+	ldi	r16,	0b000000010	; compare a interrupt
 	
 	pop	xh
 	pop	xl
@@ -170,10 +178,47 @@ SchedulerInit:
 	pop	r10
 	
 	ret
+
+SchedulerInterrupt:
+	call SchedulerChangeThread
+	
+	reti
 	
 SchedulerAddThread:
-
-		
+	; if the number of running threads is 0:
+	;    the ip of the new thread should be here:
+	;        r9  -> low
+	;        r10 -> high
+	; else: this routine will overwrite r9 & r10
+	
+	push	r16
+	push	r17
+	
+	ldd	r16,	scheduler_global_number
+	ldi	r17,	0
+	cp	r16,	r17
+	brne	SchedulerAddThreadAddThread
+	
+	; we have to get the ip
+	
+	pop	r17
+	std	(scheduler_global_unused + 0),	r17
+	pop	r17	; r17 is former r16
+	pop	r10	; high-byte
+	pop	r9	; low-byte
+	push	r9
+	push	r10
+	push	r17
+	ldd	r17,	(scheduler_global_unused + 0)
+	push	r17
+	
+	SchedulerAddThreadAddThread:
+	; TODO
+	
+	SchedulerAddThreadEnd:
+	pop	r17
+	pop	r16
+	
 	ret
 	
 SchedulerChangeThread:
