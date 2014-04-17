@@ -14,12 +14,15 @@
 ;	I O R
 ; $005F
 ; $0060
+;	external I O R
+; $00FF
+; $0100
 ;	SRAM
-;	$0060
-;		192 bytes of scheduler memory
-;	$0102
-;	$0103
-;		15,680 bytes of heap
+;	$0100
+;		164 bytes of scheduler memory
+;	$01A3
+;	$01A4
+;		15,710 bytes of heap
 ;	$3EFF
 ;	$3F00
 ;		512 bytes of stack
@@ -29,18 +32,18 @@
 ;;
 ; this a ATmega1284P specific
 
-.equ heap_start = 0x0103		; starting address of heap
+.equ heap_start = 0x01A3		; starting address of heap
 .equ heap_end   = 0x3EFF		; ending address of heap
 
-.equ scheduler_global_active = 0x0060	; address of active-thread-cell
-.equ scheduler_global_number = 0x0061	; address of thread-number-cell
+.equ scheduler_global_active = 0x0100	; address of active-thread-cell
+.equ scheduler_global_number = 0x0101	; address of thread-number-cell
 .equ scheduler_global_maxnum = 0x0004	; maximal number of thread
-.equ scheduler_global_statu1 = 0x0062	; address of global-status-cell 1
-.equ scheduler_global_statu2 = 0x0063	; address of global-status-cell 2
-.equ scheduler_global_unused = 0x0064	; start address of unused block
-.equ scheduler_global_thread = 0x006B	; starting address of scheduler memory
+.equ scheduler_global_statu1 = 0x0102	; address of global-status-cell 1
+.equ scheduler_global_statu2 = 0x0103	; address of global-status-cell 2
+.equ scheduler_global_unused = 0x0104	; start address of unused block
+.equ scheduler_global_thread = 0x010B	; starting address of scheduler memory
 .equ scheduler_global_length = 0x0026	; length of thread in scheduler memory
-.equ scheduler_global_lastad = 0x0102	; last address of scheduler memory
+.equ scheduler_global_lastad = 0x0142	; last address of scheduler memory
 .equ scheduler_global_stacks = 0x3FFF	; start address of stacks
 
 .equ scheduler_offset_stacks = 0x0080	; length of 1 stack
@@ -69,59 +72,59 @@
 ;
 ;; scheduler memory map
 ;
-; $060 active thread
-; $061 number of threads
-; $062 sr1 of scheduler
-; $063 sr2 of scheduler
+; $0100 active thread
+; $0101 number of threads
+; $0102 sr1 of scheduler
+; $0103 sr2 of scheduler
 ; // we still have 8 bytes of memory here
-; $06B
+; $010B
 ;	thread 0
-;	$06B internal sr
-;	$06C iph
-;	$06D ipl
-;	$06E sr
-;	$06F sph
-;	$070 spl
-;	$071
+;	$010B internal sr
+;	$010C iph
+;	$010D ipl
+;	$010E sr
+;	$010F sph
+;	$0110 spl
+;	$0111
 ;		gpr
-;	$090
-; $090
-; $091
+;	$0130
+; $0130
+; $0131
 ;	thread 1
-;	$091 internal sr
-;	$092 iph
-;	$093 ipl
-;	$094 sr
-;	$095 sph
-;	$096 spl
-;	$097
+;	$0131 internal sr
+;	$0132 iph
+;	$0133 ipl
+;	$0134 sr
+;	$0135 sph
+;	$0136 spl
+;	$0137
 ;		gpr
-;	$0B6
-; $0B6
-; $0B7
+;	$0156
+; $0156
+; $0157
 ;	thread 2
-;	$0B7 internal sr
-;	$0B8 iph
-;	$0B9 ipl
-;	$0BA sr
-;	$0BB sph
-;	$0BC spl
-;	$0BD
+;	$0157 internal sr
+;	$0158 iph
+;	$0159 ipl
+;	$015A sr
+;	$015B sph
+;	$015C spl
+;	$015D
 ;		gpr
-;	$0DC
-; $0DC
-; $0DD
+;	$017C
+; $017C
+; $017D
 ;	thread 3
-;	$0DD internal sr
-;	$0DE iph
-;	$0DF ipl
-;	$0E0 sr
-;	$0E1 sph
-;	$0E2 spl
-;	$0E3
+;	$017D internal sr
+;	$017E iph
+;	$017F ipl
+;	$0180 sr
+;	$0181 sph
+;	$0182 spl
+;	$0183
 ;		gpr
-;	$102
-; $102
+;	$01A2
+; $01A2
 ; 
 ;
 ;; stacks
@@ -147,10 +150,10 @@ SchedulerInit:
 	ldi	r11, 	low (scheduler_global_lastad)
 	ldi	xl, 	low (scheduler_global_active)
 	ldi	xh, 	high(scheduler_global_active)
-	SchedulerInitLoop1: ; while(xl++ != r11)
+	SchedulerInitLoop0: ; while(xl++ != r11)
 		st	x+, 	r10
 		cp	xl, 	r11
-		brne	SchedulerInitLoop1
+		brne	SchedulerInitLoop0
 		
 	; add main-thread
 	call SchedulerAddThread
@@ -197,8 +200,9 @@ SchedulerChangeThread:
 	st	x+,	r19	; r19 is on unused[6]
 	st	x+,	r20	; r19 is on unused[7]
 	
-	pop	r16	; epic win !!!!!111
-	pop	r17	
+	pop	r16	; the later item in the stack is high
+	pop	r17	; the earlier one is low
+	; epic win !!!!!111
 	; instruction pointer high is now in r16; low in r17
 	; next we have to determine where we have to store our data
 	
@@ -211,15 +215,15 @@ SchedulerChangeThread:
 	ldi	r19,	scheduler_global_length
 	ldi	r20,	0
 	
-	SchedulerChangeThreadLoop1:
+	SchedulerChangeThreadLoop0:	; while (r20++ != r18)
 		cp	r20, 	r18
-		breq 	SchedulerChangeThreadLoop1End
+		breq 	SchedulerChangeThreadLoop0End
 		; we can do the following, because the address can not be greater
 		; than 0x00FF (as you can see in the scheduler memory map)
 		add 	xl,	r19
 		inc	r20
-		jmp SchedulerChangeThreadLoop1
-	SchedulerChangeThreadLoop1End:
+		jmp SchedulerChangeThreadLoop0
+	SchedulerChangeThreadLoop0End:
 	
 	; x now contains the start address of our thread memory
 	; let's copy some data
@@ -283,15 +287,101 @@ SchedulerChangeThread:
 	st	x+,	zh
 	
 	; soooo. we now have to get to know which is the next thread.
-	; TODO:
-	;   - (r18 contains the nr of the active thread)
-	;   - r17 = scheduler_global_number
-	;   - if r18 = r17 then r18 = 0 else r18++
-	;   - cache ip
-	;   - cache sr
-	;   - replace sp
-	;   - do the same game in the other direction :D
-	;
-	; I'll write that later. 
+	
+	; r18 contains the nr of the active thread
+	; we now increment r18 (because we want the next thread)
+	inc 	r18
+	
+	ldd	r17,	(scheduler_global_number)
+	; r17 now containes the number of threads
+	
+	; if r17 equals r18 our calculated next thread number is too high
+	cpi	r17,	r18
+	brne	SchedulerChangeThreadHop0	; if (r17 == r18)
+		ldi	r18,	0
+	SchedulerChangeThreadHop0:
+	
+	; so now we'll try to calculate the position of the scheduler memory
+	; for thread [insert number in r18]
+	
+	ldi	xl, 	low (scheduler_global_thread)
+	ldi	xh, 	high(scheduler_global_thread)
+	ldi	r19,	scheduler_global_length
+	ldi	r20,	0
+	
+	SchedulerChangeThreadLoop1:	; while (r20++ != r18)
+		cp	r20, 	r18
+		breq 	SchedulerChangeThreadLoop1End
+		; we can do the following, because the address can not be greater
+		; than 0x00FF (as you can see in the scheduler memory map)
+		add 	xl,	r19
+		inc	r20
+		jmp SchedulerChangeThreadLoop1
+	SchedulerChangeThreadLoop1End:
+	
+	ld	x+,	r1	; internal sr: we don't need it
+	ld	x+,	r2	; iph is in r2
+	ld	x+,	r3	; ipl is in r3
+	ld	x+,	r16	; sr  is in r16
+	ld	x+,	r5	; sph is in r5
+	ld	x+,	r6	; spl is in r6
+	
+	std	(scheduler_global_unused + 0), r16	; sr is in unused[0]
+	
+	; let's set the stack pointer back
+	out	sph	r5
+	out	spl	r6
+	; let's push the instruction pointer back to the stack
+	push	r3	; the earlier one is low
+	push	r2	; the later one is high
+
+	; and now all registers again
+	
+	ld	r1,	x+
+	ld	r2,	x+
+	ld	r3,	x+
+	ld	r4,	x+
+	ld	r5,	x+
+	ld	r6,	x+
+	ld	r7,	x+
+	ld	r8,	x+
+	ld	r9,	x+
+	ld	r10,	x+
+	ld	r11,	x+
+	ld	r12,	x+
+	ld	r13,	x+
+	ld	r14,	x+
+	ld	r15,	x+
+	ld	r16,	x+
+	push	r16	; r16 is now on stack
+	ld	r17,	x+
+	ld	r18,	x+
+	ld	r19,	x+
+	ld	r20,	x+
+	ld	r21,	x+
+	ld	r22,	x+
+	ld	r23,	x+
+	ld	r24,	x+
+	ld	r25,	x+
+	ld	r16,	x+
+	std	(scheduler_global_unused + 2), r16	; xl is in unused[2]
+	ld	r16,	x+
+	std	(scheduler_global_unused + 3), r16	; xh is in unused[3]
+	ld	yl,	x+
+	ld	yh,	x+
+	ld	zl,	x+
+	ld	zh,	x+
+	
+	ldd	xl,	(scheduler_global_unused + 2)
+	ldd	xh,	(scheduler_global_unused + 3)
+	
+	; finaly we just have to replace the status register
+	; and we are done
+	
+	ldd	r16,	(scheduler_global_unused + 0)
+	out	sreg	r16
+	pop	r16
+	
+	; done
 	
 	ret
